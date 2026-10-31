@@ -139,6 +139,7 @@ table.pt{width:100%;border-collapse:collapse;font-size:13px;min-width:620px}
 .pt .who b{display:block;font-weight:600}.pt .who small{color:var(--dim)}
 .pt .num{font:600 17px var(--cond)}
 .outl{color:var(--miss);font-weight:600}
+.ldr.isout{opacity:.6;text-decoration:line-through}.ldr.isout::after{content:'out';color:var(--miss);font-weight:700;margin-left:2px}
 .dimc{color:var(--dim);font-size:12px;font-style:italic;text-align:left!important}
 .note{font-size:13px;color:var(--dim);line-height:1.5;margin-top:6px}
 .empty,.err{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:24px;text-align:center;color:var(--dim)}
@@ -1119,11 +1120,15 @@ function pickHTML(r) {
   const fav = p.a >= .5 ? 'A' : 'H', mg = Math.abs(p.sa - p.sh);
   const stamp = r.isFinished ? `<div class="prow"><span class="stamp ${p.hit ? 'hit' : 'miss'}">${p.hit ? 'Sim was right' : 'Sim was wrong'}</span></div>` : '';
   return `<div class="pbar" role="img" aria-label="${esc(r.away)} ${pc(p.a)}, ${esc(r.home)} ${pc(1 - p.a)}"><i style="width:${p.a * 100}%;background:${esc(pairCols(r)[0])}"></i><i style="width:${(1 - p.a) * 100}%;background:${esc(r.H.color)}"></i></div>
-    <div class="plab"><span class="pp">${pc(p.a)}</span><span class="pmid">Sim: <b>${esc(p.pick)}</b> by ${f1(mg)}<br><small>${f1(p.sa)} to ${f1(p.sh)} average, ${p.n.toLocaleString()} sims</small>${p.out ? `<br><small class="outl">Out: ${esc([...p.out.A, ...p.out.H].join(', '))}</small>` : ''}</span><span class="pp">${pc(1 - p.a)}</span></div>${stamp}`;
+    <div class="plab"><span class="pp">${pc(p.a)}</span><span class="pmid">Sim: <b>${esc(p.pick)}</b> by ${f1(mg)}<br><small>${f1(p.sa)} to ${f1(p.sh)} average, ${p.n.toLocaleString()} sims</small>${p.out ? [['A', r.away], ['H', r.home]].filter(([k]) => p.out[k].length).map(([k, nm]) => `<br><small class="outl">${esc(nm)} out: ${esc(p.out[k].join(', '))}</small>`).join('') : ''}</span><span class="pp">${pc(1 - p.a)}</span></div>${stamp}`;
+}
+function markOut(i) { // season-leader chips: cross out players the sim sat tonight
+  const r = CUR.results[i], p = r && pickOf(r), out = new Set(p && p.out ? [...p.out.A, ...p.out.H].map(normName) : []);
+  document.querySelectorAll(`#game${i} .ldr`).forEach(b => b.classList.toggle('isout', out.has(normName(b.dataset.pn))));
 }
 function paintCardPick(i) {
   const r = CUR.results[i], el = $('pick' + i); if (!r || !el) return;
-  el.innerHTML = pickHTML(r); const p = pickOf(r);
+  el.innerHTML = pickHTML(r); const p = pickOf(r); markOut(i);
   [['a', r.away], ['h', r.home]].forEach(([k, nm]) => { const t = $(`tm-${k}${i}`); if (t) t.classList.toggle('picked', !!p && p.pick === nm); });
 }
 function renderGames(results, ds) {
@@ -1135,17 +1140,18 @@ function renderGames(results, ds) {
     const p = pickOf(r), win = s => r.isFinished && r.actual === s;
     const team = (s, nm, role, k, sc) => `<div class="team ${role}${p && p.pick === nm ? ' picked' : ''}" id="tm-${k}${i}"><img src="${esc(s.logo)}" alt="" onerror="this.style.visibility='hidden'"><div class="tnm"><span class="tn">${nm}</span><small>${esc(s.record)}${s.record ? ', ' : ''}${role}</small></div>${r.isFinished ? `<span class="tsc${win(nm) ? ' win' : ''}">${sc}</span>` : ''}</div>`;
     const lead = s => s.leaders.map(l => `<button class="ldr" data-pid="${l.id}" data-pn="${esc(l.name)}" data-pi="${esc(l.img)}"><img src="${esc(l.img)}" alt="" onerror="this.style.visibility='hidden'">${esc(l.name)} <em>${esc(l.val)} ${esc(l.cat)}</em></button>`).join('');
-    return `<article class="game" style="--a:${pairCols(r)[0]};--h:${r.H.color}">
+    return `<article class="game" id="game${i}" style="--a:${pairCols(r)[0]};--h:${r.H.color}">
       <div class="gmeta"><span><b>${esc(r.status)}</b></span><span>${esc(r.arena)}${r.city ? `, ${esc(r.city)}` : ''}${r.neutral ? ' (neutral site)' : ''}</span></div>
       <div class="gline">
         ${team(r.A, r.away, 'away', 'a', r.awayScore)}
         <div class="prob" id="pick${i}">${pickHTML(r)}</div>
         ${team(r.H, r.home, 'home', 'h', r.homeScore)}
       </div>
-      <div class="gfoot"><div class="leaders">${lead(r.A)}${lead(r.H)}</div>
+      <div class="gfoot"><div class="leaders" title="Season leaders from ESPN">${lead(r.A)}${lead(r.H)}</div>
         ${r.pre ? '' : `<div class="acts"><button class="sbtn" data-watch="${i}">Watch the sim</button><button class="sbtn alt" data-mc="${i}">Run 1,000 sims</button></div>`}</div>
       <details class="pl" data-gi="${i}"><summary>Players: sim projections${r.isFinished ? ' vs actual' : ''}</summary><div class="plbody"></div></details>
     </article>`; }).join('') + `</div>`;
+  results.forEach((_, i) => markOut(i));
 }
 let loadToken = 0;
 async function loadDate(ds) {
