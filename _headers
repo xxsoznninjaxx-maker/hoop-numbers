@@ -1,0 +1,4 @@
+# lets the page read the ratings even when you open index.html from your computer
+/ratings_*.json
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=300
