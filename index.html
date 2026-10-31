@@ -140,7 +140,13 @@ table.pt{width:100%;border-collapse:collapse;font-size:13px;min-width:620px}
 .pt .num{font:600 17px var(--cond)}
 .outl{color:var(--miss);font-weight:600}
 .ldr.isout{opacity:.6;text-decoration:line-through}.ldr.isout::after{content:'out';color:var(--miss);font-weight:700;margin-left:2px}
-.ldlab{font-size:12px;font-weight:700;color:var(--dim);align-self:center;margin-right:2px}
+.gfoot{flex-direction:column;justify-content:center;text-align:center}
+.gfoot .leaders{justify-content:center}
+.gfoot .acts{margin-left:0}
+.ldlab{width:100%;text-align:center;margin:0 0 2px;font-size:12px;font-weight:700;color:var(--dim);align-self:center;margin-right:2px}
+.gfoot{flex-direction:column;justify-content:center;align-items:center;text-align:center}
+.gfoot .leaders{justify-content:center;align-items:center}
+.gfoot .acts{margin:0 auto;justify-content:center}
 .dimc{color:var(--dim);font-size:12px;font-style:italic;text-align:left!important}
 .note{font-size:13px;color:var(--dim);line-height:1.5;margin-top:6px}
 .empty,.err{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:24px;text-align:center;color:var(--dim)}
