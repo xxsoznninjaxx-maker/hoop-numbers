@@ -327,7 +327,7 @@ details.pl{border-top:1px dashed var(--line)}
 <main class="wrap">
   <section class="hero">
     <svg class="ballart" viewBox="0 0 100 100" aria-hidden="true"><defs><radialGradient id="bg1" cx="35%" cy="32%" r="70%"><stop offset="0" stop-color="#FFB070"/><stop offset=".55" stop-color="#F26B1D"/><stop offset="1" stop-color="#A9420A"/></radialGradient></defs><circle cx="50" cy="50" r="47" fill="url(#bg1)"/><g fill="none" stroke="#3A1A06" stroke-width="2.2" stroke-linecap="round"><circle cx="50" cy="50" r="47"/><path d="M3 50h94M50 3v94"/><path d="M17 15c11 9 17 21 17 35s-6 26-17 35"/><path d="M83 15c-11 9-17 21-17 35s6 26 17 35"/></g><ellipse cx="34" cy="28" rx="12" ry="7" fill="#fff" opacity=".18" transform="rotate(-30 34 28)"/></svg>
-        <div><h2 class="disp" id="bigDate">--</h2><p id="heroSub">Pick a date to see who the sim favors.</p><div class="simstatus" id="simStatus"></div></div>
+        <div><h2 class="disp" id="bigDate">--</h2><p id="heroSub">Pick a date to see who the sim favors.</p><div class="simstatus" id="simStatus"></div><div class="note" id="ratWarn" style="color:var(--miss);font-weight:600"></div></div>
     <div class="boards">
       <div class="board"><h3 id="monthLbl">This month</h3><div id="monthStats"></div></div>
       <div class="board"><h3 id="yearLbl">This season</h3><div id="yearStats"></div></div>
@@ -819,6 +819,7 @@ async function ratingsAt(ds) { // the ratings as of that morning: latest day on 
 function ratingsNote() {
   const el = document.getElementById('ratTag'); if (!el) return;
   const R = RATINGS[seasonOf(CUR.date || todayStr())];
+  const st = document.getElementById('ratWarn'); if (st) st.textContent = R ? '' : 'Ratings file not online yet: picks below run without player on/off ratings and are not saved.';
   el.textContent = R ? `Player on/off ratings updated ${new Date(R.updated).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} (${R.games} games).` : 'Player on/off ratings file not found, so that setting is off for now.';
 }
 // ================= schedule =================
@@ -881,13 +882,13 @@ try { Object.assign(CFG, JSON.parse(localStorage.getItem(SKEY) || '{}') || {}); 
 const sigOf = c => ['R' + RATINGS_V, c.rapm, c.form, c.fhl, c.home, c.def, c.hl, c.b2b, c.sims, c.close ? 1 : 0, c.box ? 1 : 0, c.rest, c.travel, c.alt, c.match, c.inj ? 1 : 0, c.injQ ? 1 : 0, Object.keys(c.off || {}).filter(k => c.off[k]).sort().join(',')].join('|');
 let STORE = {}; try { STORE = JSON.parse(localStorage.getItem(PKEY) || '{}') || {}; } catch (e) { STORE = {}; }
 let PICKS = STORE[sigOf(CFG)] ||= {};   // each group of settings keeps its own picks, so switching back is instant
-let LIVE = {}, PROJ = {}, FAIL = {};
+let LIVE = {}, TEMP = {}, PROJ = {}, FAIL = {}; // TEMP: picks shown but not saved (made while the ratings file was missing)
 let saveT = 0;
 const savePicks = () => { clearTimeout(saveT); saveT = setTimeout(() => {
   const keys = Object.keys(STORE); while (keys.length > 4) { const k = keys.shift(); if (k !== sigOf(CFG)) delete STORE[k]; }
   try { localStorage.setItem(PKEY, JSON.stringify(STORE)); } catch (e) {} }, 800); };
 function pickOf(r) {
-  const p = PICKS[r.eventId] || (r.isFinished ? null : LIVE[r.eventId]); if (!p) return null;
+  const p = PICKS[r.eventId] || TEMP[r.eventId] || (r.isFinished ? null : LIVE[r.eventId]); if (!p) return null;
   const pick = p.a >= .5 ? r.away : r.home;
   return { pick, p: Math.max(p.a, 1 - p.a), a: p.a, sa: p.sa, sh: p.sh, n: p.n || CFG.sims, out: p.out, hit: r.isFinished ? pick === r.actual : null };
 }
@@ -1023,7 +1024,8 @@ async function computePick(r, prog) {
   const rec = { a: +q.a.toFixed(3), sa: +q.sa.toFixed(1), sh: +q.sh.toFixed(1), n: q.n };
   const outs = { A: M.A.outList || [], H: M.H.outList || [] }; if (outs.A.length || outs.H.length) rec.out = outs;
   const usesInj = CFG.inj && !r.isFinished && r.date >= todayStr(); // injury news can change before tip-off
-  if (r.date <= todayStr() && !usesInj && !(val('rapm') && I.noRatings)) { if (!PICKS[r.eventId]) { PICKS[r.eventId] = rec; savePicks(); } } else LIVE[r.eventId] = rec;
+  if (val('rapm') && I.noRatings && !usesInj) TEMP[r.eventId] = rec; // shown, recomputed once the ratings file loads
+  else if (r.date <= todayStr() && !usesInj) { if (!PICKS[r.eventId]) { PICKS[r.eventId] = rec; savePicks(); } } else LIVE[r.eventId] = rec;
 }
 
 // ---- queue: today's slate first, then the month, then the season ----
@@ -1653,7 +1655,7 @@ function applySettings(c) {
   const same = sigOf(c) === sigOf(CFG);
   Object.assign(CFG, c); try { localStorage.setItem(SKEY, JSON.stringify(CFG)); } catch (e) {}
   if (same) return;
-  PICKS = STORE[sigOf(CFG)] ||= {}; LIVE = {}; PROJ = {}; FAIL = {}; Q.list = [];
+  PICKS = STORE[sigOf(CFG)] ||= {}; LIVE = {}; TEMP = {}; PROJ = {}; FAIL = {}; Q.list = [];
   loadDate(CUR.date || todayStr());
 }
 $('setOpen').onclick = () => { fillSettings(CFG); $('setNote').textContent = ''; $('setModal').hidden = false; document.body.style.overflow = 'hidden'; };
