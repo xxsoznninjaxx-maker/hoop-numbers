@@ -140,6 +140,7 @@ table.pt{width:100%;border-collapse:collapse;font-size:13px;min-width:620px}
 .pt .num{font:600 17px var(--cond)}
 .outl{color:var(--miss);font-weight:600}
 .ldr.isout{opacity:.6;text-decoration:line-through}.ldr.isout::after{content:'out';color:var(--miss);font-weight:700;margin-left:2px}
+.ldlab{font-size:12px;font-weight:700;color:var(--dim);align-self:center;margin-right:2px}
 .dimc{color:var(--dim);font-size:12px;font-style:italic;text-align:left!important}
 .note{font-size:13px;color:var(--dim);line-height:1.5;margin-top:6px}
 .empty,.err{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:24px;text-align:center;color:var(--dim)}
@@ -1147,7 +1148,7 @@ function renderGames(results, ds) {
         <div class="prob" id="pick${i}">${pickHTML(r)}</div>
         ${team(r.H, r.home, 'home', 'h', r.homeScore)}
       </div>
-      <div class="gfoot"><div class="leaders" title="Season leaders from ESPN">${lead(r.A)}${lead(r.H)}</div>
+      <div class="gfoot"><div class="leaders">${r.A.leaders.length + r.H.leaders.length ? `<span class="ldlab">${r.isFinished ? 'Game leaders' : 'Season leaders'}</span>` : ''}${lead(r.A)}${lead(r.H)}</div>
         ${r.pre ? '' : `<div class="acts"><button class="sbtn" data-watch="${i}">Watch the sim</button><button class="sbtn alt" data-mc="${i}">Run 1,000 sims</button></div>`}</div>
       <details class="pl" data-gi="${i}"><summary>Players: sim projections${r.isFinished ? ' vs actual' : ''}</summary><div class="plbody"></div></details>
     </article>`; }).join('') + `</div>`;
